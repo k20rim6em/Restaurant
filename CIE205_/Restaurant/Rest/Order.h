@@ -56,7 +56,7 @@ public:
 	int GetSize() const;
 	void SetServTime(int t) { ServTime = t; }
 	void SetFinishTime(int t) { FinishTime = t; }
-	
+	int getSize() const { return size; }
 
 
 };
