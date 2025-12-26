@@ -34,9 +34,12 @@ private:
 	Queue<Cook*> Normal_Cooks;
 	Queue<Cook*> Vegan_Cooks;
 	Queue<Cook*> VIP_Cooks;
-    int ServiceCounter = 0; 
+	Queue<Cook*> AvailableNormalCooks;
+	Queue<Cook*> AvailableVeganCooks;
+	Queue<Cook*> AvailableVIPCooks;
+	int ServiceCounter = 0;
 
-
+	Pri_Queue<Cook*> BusyCooks;
 	
 	
 	
@@ -46,7 +49,11 @@ private:
 	int AutoP;
 	int N_Cooks, G_Cooks, V_Cooks;
 	int SN, SG, SV;
-	int BO, BN, BG, BV;
+	int BO; // Number of orders before a break
+	int BN, BG, BV; // Break durations for Normal, Vegan, and VIP cooks
+	int N_Orders;
+	int G_Orders;
+	int V_Orders;
 
 public:
 	
@@ -73,13 +80,12 @@ public:
 	bool CancelNormalOrder(int id);
 	void PromoteOrder(int id, double extra);
 
-
-	void AssignCookToOrder(int CurrentTimeStep);
-	int CalculateST(Order* o, Cook* c);
-
-
-	/*string AskForFileName();*/
-
+	void ServeOrders(int currentTS);
+	void CheckFinishedOrders(int currentTS);
+	void Assign(Cook* pCook, Order* pOrd, int currentTS);
+	void ReturnCookToQueue(Cook* pCook);
+	void CheckAutoPromotion(int currentTS);
+	
 	
 
 	// helpers
