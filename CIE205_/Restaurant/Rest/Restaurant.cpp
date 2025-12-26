@@ -29,93 +29,183 @@ void Restaurant::RunSimulation()
     string filename = AskForFileName();
     if (!LoadData(filename))
     {
-        pGUI->waitForClick();   
-        return;                
+        pGUI->waitForClick();
+        return;
     }
 
 
     int CurrentTimeStep = 1;
 
-    while (!EventsQueue.isEmpty())
+    while (!EventsQueue.isEmpty() || !Normal_Waiting.isEmpty() || !Vegan_Waiting.isEmpty() ||
+        !VIP_Waiting.isEmpty() || !BusyCooks.isEmpty())
     {
-      
         pGUI->PrintMessage("TS = " + to_string(CurrentTimeStep));
 
-      
+        // 1. Execute events (Arrivals, Cancellations, Promotions)
         ExecuteEvents(CurrentTimeStep);
-        AssignCookToOrder(CurrentTimeStep);
-        Order* o;
-        int priority;
 
-       
-       if (VIP_Waiting.dequeue(o, priority))
-        {
-            o->SetServTime(CurrentTimeStep);
-            o->SetFinishTime(CurrentTimeStep + 1);   
-            InService.enqueue(o);
-        }
+        // 2. Handle Auto-Promotion (Optional but recommended)
+        // CheckAutoPromotion(CurrentTimeStep);
 
-       
-        if (Vegan_Waiting.dequeue(o))
-        {
-            o->SetServTime(CurrentTimeStep);
-            o->SetFinishTime(CurrentTimeStep + 1);
-            InService.enqueue(o);
-        }
+        // 3. Move waiting orders to cooks
+        ServeOrders(CurrentTimeStep);
 
-       
-        if (Normal_Waiting.dequeue(o))
-        {
-            o->SetServTime(CurrentTimeStep);
-            o->SetFinishTime(CurrentTimeStep + 1);
-            InService.enqueue(o);
-        }
+        // 4. Check which cooks finished their orders
+        CheckFinishedOrders(CurrentTimeStep);
 
-       
-        Queue<Order*> temp;
-        while (InService.dequeue(o))
-        {
-            if (o->GetFinishTime() == CurrentTimeStep)  
-            { 
-                Finished.enqueue(o);
-            }
-            else
-            {
-                temp.enqueue(o); 
-            }
-
-        }
-
-        while (temp.dequeue(o))
-        { 
-            InService.enqueue(o);
-        }
-
+        // 5. Interface Update
         pGUI->ResetDrawingList();
         FillDrawingList();
         pGUI->UpdateInterface();
 
-   
-        if ( mode == MODE_INTR || mode == MODE_DEMO)
-        { 
-            pGUI->waitForClick();
-        }
-        else if(mode == MODE_STEP )
-        {
-			Sleep(1000);
-        }
+        // Draw the numbers/stats
+        pGUI->DrawCounts(Normal_Waiting.getSize(), VIP_Waiting.getSize(),
+            Vegan_Waiting.getSize(), InService.getSize(), Finished.getSize());
+
+        // Timing logic
+        if (mode == MODE_INTR) pGUI->waitForClick();
+        else if (mode == MODE_STEP) Sleep(1000);
+
         CurrentTimeStep++;
     }
 
-    pGUI->PrintMessage("Simulation End | Cooks: N=" + to_string(N_Cooks)+ " G=" + to_string(G_Cooks)+ " V=" + to_string(V_Cooks));
+    pGUI->PrintMessage("Simulation End | Cooks: N=" + to_string(N_Cooks) + " G=" + to_string(G_Cooks) + " V=" + to_string(V_Cooks));
     cout << "Processing TS = " << CurrentTimeStep << endl;
     cout << "VIP waiting = " << VIP_Waiting.getSize() << endl;
     cout << "Normal waiting = " << Normal_Waiting.getSize() << endl;
     cout << "Vegan waiting = " << Vegan_Waiting.getSize() << endl;
     pGUI->waitForClick();
+
+    
+}
+void Restaurant::ReturnCookToQueue(Cook* pCook) {
+    if (pCook->GetType() == TYPE_NRM)
+        AvailableNormalCooks.enqueue(pCook);
+    else if (pCook->GetType() == TYPE_VGAN)
+        AvailableVeganCooks.enqueue(pCook);
+    else if (pCook->GetType() == TYPE_VIP)
+        AvailableVIPCooks.enqueue(pCook);
+}
+void Restaurant::Assign(Cook* pCook, Order* pOrd, int currentTS) {
+    pOrd->setStatus(SRV);
+    pOrd->SetServTime(currentTS);
+
+    // Calculate Service Time: ST = ceil(OrderSize / CookSpeed)
+    // Integer formula for ceil: (a + b - 1) / b
+    int serviceTime = (pOrd->getSize() + pCook->GetSpeed() - 1) / pCook->GetSpeed();
+    int finishTime = currentTS + serviceTime;
+
+    pOrd->SetFinishTime(finishTime);
+    pCook->setCurrentOrder(pOrd);
+    pCook->setFinishTime(finishTime); // You may need to add this setter to Cook class
+
+    // Add to In-Service and Busy Containers
+    InService.enqueue(pOrd);
+
+    // Using negative finishTime as priority so the smallest finishTime (earliest) is at top
+    BusyCooks.enqueue(pCook, -finishTime);
 }
 
 
+void Restaurant::AddToNormalWaiting(Order* p) {
+    Normal_Waiting.enqueue(p);
+    N_Orders++; // Increment the total counter
+}
+
+void Restaurant::AddToVeganWaiting(Order* p) {
+    Vegan_Waiting.enqueue(p);
+    G_Orders++; // Increment the total counter
+}
+
+void Restaurant::AddToVIPWaiting(Order* p) {
+    int priority = (int)(p->getMoney());
+    VIP_Waiting.enqueue(p, priority);
+    V_Orders++; // Increment the total counter
+}
+
+void Restaurant::ServeOrders(int currentTS) {
+    Order* pOrd;
+    Cook* pCook;
+    int pri;
+
+    // 1. VIP Orders Priority: VIP Cook -> Normal -> Vegan
+    while (VIP_Waiting.peek(pOrd, pri)) {
+        if (AvailableVIPCooks.dequeue(pCook)) {}
+        else if (AvailableNormalCooks.dequeue(pCook)) {}
+        else if (AvailableVeganCooks.dequeue(pCook)) {}
+        else break; // No cooks for VIP
+
+        VIP_Waiting.dequeue(pOrd, pri);
+        Assign(pCook, pOrd, currentTS);
+    }
+
+    // 2. Vegan Orders Priority: Vegan Cook ONLY
+    while (Vegan_Waiting.peekFront(pOrd)) {
+        if (AvailableVeganCooks.dequeue(pCook)) {
+            Vegan_Waiting.dequeue(pOrd);
+            Assign(pCook, pOrd, currentTS);
+        }
+        else break;
+    }
+
+    // 3. Normal Orders Priority: Normal Cook -> VIP
+    while (Normal_Waiting.peekFront(pOrd)) {
+        if (AvailableNormalCooks.dequeue(pCook)) {}
+        else if (AvailableVIPCooks.dequeue(pCook)) {}
+        else break;
+
+        Normal_Waiting.dequeue(pOrd);
+        Assign(pCook, pOrd, currentTS);
+    }
+}
+
+
+void Restaurant::CheckAutoPromotion(int currentTS) {
+    Order* pOrd;
+    Queue<Order*> temp;
+    while (Normal_Waiting.dequeue(pOrd)) {
+        // If (CurrentTime - ArrivalTime) >= AutoP limit
+        if (currentTS - pOrd->GetArrTime() >= AutoP) {
+            pOrd->setType(TYPE_VIP);
+            AddToVIPWaiting(pOrd); // Moves it to VIP queue
+        }
+        else {
+            temp.enqueue(pOrd);
+        }
+    }
+    while (temp.dequeue(pOrd)) Normal_Waiting.enqueue(pOrd);
+}
+
+
+void Restaurant::CheckFinishedOrders(int currentTS) {
+    Cook* pCook;
+    Order* pOrd;
+    int pri;
+
+    // Peek at BusyCooks (Priority Queue sorted by Finish Time)
+    // We use a negative finish time or custom priority so the lowest TS is at the top
+    while (BusyCooks.peek(pCook, pri)) {
+        if (pCook->getFinishTime() <= currentTS) {
+            BusyCooks.dequeue(pCook, pri);
+            pOrd = pCook->getCurrentOrder();
+
+            pOrd->setStatus(DONE);
+            Finished.enqueue(pOrd);
+
+            pCook->incrementOrdersServed();
+            pCook->setCurrentOrder(nullptr);
+
+            // Check if cook needs a break (BO = Break After X Orders)
+            if (pCook->getOrdersServed() == BO) {
+                pCook->setBreak(currentTS);
+            }
+
+            // Return cook to their specific available queue
+            ReturnCookToQueue(pCook);
+        }
+        else break;
+    }
+}
 
 void Restaurant::ExecuteEvents(int CurrentTimeStep)
 {
@@ -136,86 +226,23 @@ Restaurant::~Restaurant()
 {
     if (pGUI) delete pGUI;
 }
-int Restaurant::CalculateST(Order* o, Cook* c)
-{
-    return (int)ceil((double)o->GetSize() / c->GetSpeed());
-}
 
-void Restaurant::AssignCookToOrder(int CurrentTimeStep)
-{
-    Cook* c;
-    Order* o;
-    int priority;
 
-    // VIP Orders
-    if (!VIP_Waiting.isEmpty() && !VIP_Cooks.isEmpty())
-    {
-        VIP_Cooks.dequeue(c);
-        if (c->CanTakeOrder())
-        {
-            VIP_Waiting.dequeue(o, priority);
-            c->AssignOrder(o);
-
-            int ST = CalculateST(o, c);
-            o->SetServTime(CurrentTimeStep);
-            o->SetFinishTime(CurrentTimeStep + ST);
-
-            InService.enqueue(o);
-        }
-        VIP_Cooks.enqueue(c);
-    }
-
-    // Vegan Orders
-    if (!Vegan_Waiting.isEmpty() && !Vegan_Cooks.isEmpty())
-    {
-        Vegan_Cooks.dequeue(c);
-        if (c->CanTakeOrder())
-        {
-            Vegan_Waiting.dequeue(o);
-            c->AssignOrder(o);
-
-            int ST = CalculateST(o, c);
-            o->SetServTime(CurrentTimeStep);
-            o->SetFinishTime(CurrentTimeStep + ST);
-
-            InService.enqueue(o);
-        }
-        Vegan_Cooks.enqueue(c);
-    }
-
-    // Normal Orders
-    if (!Normal_Waiting.isEmpty() && !Normal_Cooks.isEmpty())
-    {
-        Normal_Cooks.dequeue(c);
-        if (c->CanTakeOrder())
-        {
-            Normal_Waiting.dequeue(o);
-            c->AssignOrder(o);
-
-            int ST = CalculateST(o, c);
-            o->SetServTime(CurrentTimeStep);
-            o->SetFinishTime(CurrentTimeStep + ST);
-
-            InService.enqueue(o);
-        }
-        Normal_Cooks.enqueue(c);
-    }
-}
 
 void Restaurant::FillDrawingList()
 {
     Order* o;
     Cook* c;
 
-    
-   Queue<Order*> tempN;
+
+    Queue<Order*> tempN;
     while (Normal_Waiting.dequeue(o))
     {
         pGUI->AddToDrawingList(o);
         tempN.enqueue(o);
     }
     while (tempN.dequeue(o))
-    { 
+    {
         Normal_Waiting.enqueue(o);
     }
 
@@ -226,7 +253,7 @@ void Restaurant::FillDrawingList()
         tempG.enqueue(o);
     }
     while (tempG.dequeue(o))
-    { 
+    {
         Vegan_Waiting.enqueue(o);
     }
     Order* vipOrder;
@@ -238,7 +265,7 @@ void Restaurant::FillDrawingList()
         pGUI->AddToDrawingList(vipOrder);
         tempVIP.push_back({ vipOrder, priority });
     }
-    
+
     for (auto& item : tempVIP)
     {
         VIP_Waiting.enqueue(item.first, item.second);
@@ -256,7 +283,7 @@ void Restaurant::FillDrawingList()
         InService.enqueue(o);
 
 
-    
+
     Queue<Order*> tempF;
     while (Finished.dequeue(o))
     {
@@ -264,11 +291,11 @@ void Restaurant::FillDrawingList()
         tempF.enqueue(o);
     }
     while (tempF.dequeue(o))
-    { 
+    {
         Finished.enqueue(o);
     }
 
-    
+
     Queue<Cook*> tempNC;
     while (Normal_Cooks.dequeue(c))
     {
@@ -276,11 +303,11 @@ void Restaurant::FillDrawingList()
         tempNC.enqueue(c);
     }
     while (tempNC.dequeue(c))
-    { 
+    {
         Normal_Cooks.enqueue(c);
     }
 
-    
+
     Queue<Cook*> tempVC;
     while (Vegan_Cooks.dequeue(c))
     {
@@ -291,7 +318,7 @@ void Restaurant::FillDrawingList()
         Vegan_Cooks.enqueue(c);
 
 
-    
+
     Queue<Cook*> tempVIPC;
     while (VIP_Cooks.dequeue(c))
     {
@@ -299,25 +326,12 @@ void Restaurant::FillDrawingList()
         tempVIPC.enqueue(c);
     }
     while (tempVIPC.dequeue(c))
-    { 
+    {
         VIP_Cooks.enqueue(c);
     }
 }
 
 
-void Restaurant::AddToNormalWaiting(Order* p)
-{ 
-    Normal_Waiting.enqueue(p); 
-}
-void Restaurant::AddToVeganWaiting(Order* p) 
-{
-    Vegan_Waiting.enqueue(p); 
-}
-void Restaurant::AddToVIPWaiting(Order* p)
-{ 
-    int priority = (int)(p->getMoney());
-    VIP_Waiting.enqueue(p, priority);
-}
 
 bool Restaurant::CancelNormalOrder(int id)
 {
@@ -337,7 +351,7 @@ bool Restaurant::CancelNormalOrder(int id)
     }
 
     while (temp.dequeue(x))
-    { 
+    {
         Normal_Waiting.enqueue(x);
     }
     return deleted;
@@ -360,13 +374,13 @@ void Restaurant::PromoteOrder(int id, double extra)
             found = true;
         }
         else
-        { 
+        {
             temp.enqueue(x);
         }
     }
 
     while (temp.dequeue(x))
-    { 
+    {
         Normal_Waiting.enqueue(x);
     }
 }
@@ -378,7 +392,7 @@ Order* Restaurant::GetNextNormal()
         return nullptr;
     }
 
-   Order* o;
+    Order* o;
     Normal_Waiting.dequeue(o);
     return o;
 }
@@ -397,7 +411,7 @@ Order* Restaurant::GetNextVegan()
 
 Order* Restaurant::GetNextVIP()
 {
-    if (VIP_Waiting.isEmpty()) 
+    if (VIP_Waiting.isEmpty())
     {
         return nullptr;
     }
@@ -414,13 +428,13 @@ Order* Restaurant::GetNextVIP()
 string Restaurant::AskForFileName()
 {
     pGUI->PrintMessage("Enter input file name (example: test.txt):");
-    string filename = pGUI->GetString();   
+    string filename = pGUI->GetString();
     return filename;
 }
 
 
 // Data Load function
-bool Restaurant::LoadData(string inputfilename) 
+bool Restaurant::LoadData(string inputfilename)
 {
     ifstream file(inputfilename);
 
@@ -432,10 +446,10 @@ bool Restaurant::LoadData(string inputfilename)
     }
 
 
-    int N = 0, G = 0, V = 0;       
-    int SN = 0, SG = 0, SV = 0;    
-                  
-    int M = 0;                    
+    int N = 0, G = 0, V = 0;
+    int SN = 0, SG = 0, SV = 0;
+
+    int M = 0;
 
     file >> N >> G >> V;
     file >> SN >> SG >> SV;
@@ -443,25 +457,29 @@ bool Restaurant::LoadData(string inputfilename)
     file >> AutoP;
     file >> M;
 
-  
-    N_Cooks = N; 
-    G_Cooks = G; 
+
+    N_Cooks = N;
+    G_Cooks = G;
     V_Cooks = V;
 
-    for (int i = 0; i < N; i++)
-    { 
-        Normal_Cooks.enqueue(new Cook(i + 1, TYPE_NRM, SN));
+
+    for (int i = 0; i < N; i++) {
+        Cook* pC = new Cook(i + 1, TYPE_NRM, SN);
+        Normal_Cooks.enqueue(pC); // For drawing
+        AvailableNormalCooks.enqueue(pC); // FOR LOGIC
     }
-    for (int i = 0; i < G; i++)
-    { 
-        Vegan_Cooks.enqueue(new Cook(i + 1, TYPE_VGAN, SG));
+    for (int i = 0; i < G; i++) {
+        Cook* pC = new Cook(i + 1, TYPE_VGAN, SG);
+        Vegan_Cooks.enqueue(pC);
+        AvailableVeganCooks.enqueue(pC);
     }
-    for (int i = 0; i < V; i++)
-    { 
-        VIP_Cooks.enqueue(new Cook(i + 1, TYPE_VIP, SV));
+    for (int i = 0; i < V; i++) {
+        Cook* pC = new Cook(i + 1, TYPE_VIP, SV);
+        VIP_Cooks.enqueue(pC);
+        AvailableVIPCooks.enqueue(pC);
     }
-    
-    for (int i = 0; i < M; i++) 
+
+    for (int i = 0; i < M; i++)
     {
         char eventtype;
         file >> eventtype;
@@ -481,36 +499,36 @@ bool Restaurant::LoadData(string inputfilename)
             ORD_TYPE Type;
 
             if (TYP == 'N')
-            { 
+            {
                 Type = TYPE_NRM;
             }
             else if (TYP == 'G')
             {
                 Type = TYPE_VGAN;
             }
-            else 
-            { 
-            Type = TYPE_VIP;
+            else
+            {
+                Type = TYPE_VIP;
             }
 
             Event* pEv = new ArrivalEvent(TS, Type, ID, DIST, SIZE, MONY);
             EventsQueue.enqueue(pEv);
         }
-        else if (eventtype == 'X') 
+        else if (eventtype == 'X')
         {
             int TS, ID;
             file >> TS >> ID;
             Event* pEv = new CancellationEvent(TS, ID);
             EventsQueue.enqueue(pEv);
         }
-        else if (eventtype == 'P') 
+        else if (eventtype == 'P')
         {
             int TS, ID; double ExMony;
             file >> TS >> ID >> ExMony;
             Event* pEv = new PromotionEvent(TS, ID, ExMony);
             EventsQueue.enqueue(pEv);
         }
-        else 
+        else
         {
             string rest;
             getline(file, rest);
@@ -522,3 +540,4 @@ bool Restaurant::LoadData(string inputfilename)
     file.close();
     return true;
 }
+
