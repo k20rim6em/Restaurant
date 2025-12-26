@@ -16,6 +16,7 @@ Order::Order(int id, ORD_TYPE r_Type,int s ,double m)
 	FinishTime = 0;
 	size = s;
 	pAssignedCook = nullptr;
+	
 }
 
 Order::~Order()

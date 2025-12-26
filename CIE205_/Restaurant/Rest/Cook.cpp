@@ -49,7 +49,6 @@ void Cook::SetSpeed(int s)
 	speed = s;
 }
 
-// ================= States =================
 
 bool Cook::IsBusy() const
 {
@@ -107,3 +106,11 @@ void Cook::EndBreak()
 	breakStartTime = -1;
 }
 
+void Cook::CalculateUtilization()
+{
+	int total = busyTime + idleTime + breakTime;
+	if (total > 0)
+		Utilization = ((double)busyTime / total) * 100.0;
+	else
+		Utilization = 0;
+}

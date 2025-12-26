@@ -9,16 +9,12 @@ CancellationEvent::CancellationEvent(int eTime, int oID) : Event(eTime, oID)
 
 void CancellationEvent::Execute(Restaurant* pRest)
 {
-    bool cancelled = pRest->CancelNormalOrder(OrderID);
+    bool cancelled = pRest->CancelOrder(OrderID);
 
-
-    if (cancelled)
-    {
-        cout <<"Cancellation Event Executed: Order " << OrderID << "cancelled" << endl;
+    if (cancelled) {
+        cout << "Cancellation Event Executed: Order " << OrderID << " cancelled" << endl;
     }
-    else
-    {
-        cout <<"Cancellation Event Executed: Order " << OrderID << "not found" << endl;
-
+    else {
+        cout << "Cancellation Event Executed: Order " << OrderID << " not found" << endl;
     }
 }

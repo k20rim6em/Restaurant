@@ -4,30 +4,31 @@
 #include "..\Defs.h"
 #include "Cook.h"
 
+
+
 class Order
 {
 
 protected:
 
-	int ID;         //Each order has a unique ID (from 1 --> 999 )
-	ORD_TYPE type;		//order type: Normal, vegan, VIP
-	ORD_STATUS status;	//waiting, in-service, done
-	int Distance;	//The distance (in meters) between the order location and the resturant 
+	int ID;       
+	ORD_TYPE type;
+	ORD_STATUS status;	
+	int Distance;	
 	Cook* pAssignedCook;
 	int size;
 	double money;
-	double totalMoney;	//Total order money
+	double totalMoney;	
 
 	int ArrTime;        
 	int WaitingTime;    
 	int ServTime;    
 	int FinishTime;	
+	bool wasAutoPromoted = false;
+	
+
+
 	   
-	
-	
-	//
-	// TODO: Add More Data Members As Needed
-	//
 
 public:
 	Order(int id, ORD_TYPE r_Type, int s, double money);
@@ -46,6 +47,9 @@ public:
 	void setStatus(ORD_STATUS s);
 	void setType(ORD_TYPE t);
 
+	bool WasAutoPromoted() const { return wasAutoPromoted; }
+	void SetAutoPromoted(bool val) { wasAutoPromoted = val; }
+
 
 	
 	//
@@ -63,11 +67,10 @@ public:
 
 	void setArrTime(int t);   
 	
-	
-	void SetServTime(int t) { ServTime = t; }
 	void SetFinishTime(int t) { FinishTime = t; }
 	
-
+	void SetCook(Cook* c) { pAssignedCook = c; }
+	Cook* GetCook() const { return pAssignedCook; }
 
 };
 

@@ -1,0 +1,16 @@
+FT	ID	AT	WT	ST
+2	101	1	0	1
+3	102	2	0	1
+5	103	3	0	2
+7	104	6	0	1
+
+Orders: 4 [Norm:2, Veg:1, VIP:1]
+Cooks: 6 [Norm:3, Veg:2, VIP:1]
+Avg Wait = 0, Avg Serv = 1.25
+Auto-promoted: 0
+Cook 3: Orders [Norm:0, Veg:0, VIP:0], Busy: 0, Idle: 7, Break/Injury: 0, Utilization: 0%
+Cook 1: Orders [Norm:1, Veg:0, VIP:0], Busy: 2, Idle: 5, Break/Injury: 0, Utilization: 28.5714%
+Cook 2: Orders [Norm:1, Veg:0, VIP:0], Busy: 2, Idle: 5, Break/Injury: 0, Utilization: 28.5714%
+Cook 5: Orders [Norm:0, Veg:0, VIP:0], Busy: 0, Idle: 7, Break/Injury: 0, Utilization: 0%
+Cook 4: Orders [Norm:0, Veg:1, VIP:0], Busy: 2, Idle: 5, Break/Injury: 0, Utilization: 28.5714%
+Cook 6: Orders [Norm:0, Veg:0, VIP:1], Busy: 3, Idle: 4, Break/Injury: 0, Utilization: 42.8571%

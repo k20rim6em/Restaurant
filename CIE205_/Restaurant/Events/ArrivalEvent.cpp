@@ -26,34 +26,26 @@ void ArrivalEvent::Execute(Restaurant* pRest)
 
     cout << "-Arrival Event Executed: Order " << OrderID << " arrived (";
 
-    if (OrdType == TYPE_NRM)
-    { 
-        cout << "N";
-    }
-    else if (OrdType == TYPE_VGAN)
-    { 
-        cout << "G";
-    }
-    else
-    { 
-        cout << "V";
-    }
-    cout << ", size=" << ordSize << ", money=" << OrdMoney << ")" << endl;
+    if (OrdType == TYPE_NRM) cout << "N";
+    else if (OrdType == TYPE_VGAN) cout << "G";
+    else cout << "V";
 
+    cout << ", size=" << ordSize << ", money=" << OrdMoney << ")" << endl;
 
     if (OrdType == TYPE_NRM)
     {
         pRest->AddToNormalWaiting(pOrd);
+		pOrd->setType(TYPE_NRM);
     }
     else if (OrdType == TYPE_VGAN)
     {
         pRest->AddToVeganWaiting(pOrd);
+        pOrd->setType(TYPE_VGAN);
     }
     else
     {
         pRest->AddToVIPWaiting(pOrd);
+        pOrd->setType(TYPE_VIP);
     }
-    
-
 
 }

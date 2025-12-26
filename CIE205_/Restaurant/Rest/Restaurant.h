@@ -13,7 +13,6 @@
 #include "Order.h"
 
 
-// it is the maestro of the project
 class Restaurant  
 {	
 private:
@@ -36,13 +35,25 @@ private:
 	Queue<Cook*> VIP_Cooks;
     int ServiceCounter = 0; 
 
+	
+	int normalOrders = 0;
+	int veganOrders = 0;
+	int vipOrders = 0;
+	int totalOrders = normalOrders + veganOrders + vipOrders;
 
+	int totalWaitingTime = 0;
+	int totalServiceTime = 0;
+	double avgWaitingTime = 0.0;
+	double avgServiceTime = 0.0;
+
+	int autoPromotedOrders = 0;
+
+	int totalCooks = 0;
+	int normalCooks = 0;
+	int veganCooks = 0;
+	int vipCooks = 0;
 	
 	
-	
-	//
-	// TODO: Add More Data Members As Needed
-	//
 	int AutoP;
 	int N_Cooks, G_Cooks, V_Cooks;
 	int SN, SG, SV;
@@ -56,6 +67,7 @@ public:
 	void ExecuteEvents(int TimeStep);	//executes all events at current timestep
 	void RunSimulation();
 	bool LoadData(string inputfilename);
+	void InsertFinishedOrder(Order* o);
 	void WriteOutputFile();
 	string AskForFileName();
 
@@ -64,24 +76,23 @@ public:
 
 	void FillDrawingList();
 
-	//
-	// TODO: Add More Member Functions As Needed
-	//
-
+	
 	void AddToNormalWaiting(Order* p);
 	void AddToVeganWaiting(Order* p);
 	void AddToVIPWaiting(Order* p);
 	bool CancelNormalOrder(int id);
+	void UpdateCookTimes();
+	void CalculateAllCooksUtilization();
 	void PromoteOrder(int id, double extra);
+
+	void AutoPromoteOrders(int CurrentTimeStep);
+
+	bool CancelOrder(int id);
 
 
 	void AssignCookToOrder(int CurrentTimeStep);
 	int CalculateST(Order* o, Cook* c);
 
-
-	/*string AskForFileName();*/
-
-	
 
 	// helpers
 	Order* GetNextNormal();
