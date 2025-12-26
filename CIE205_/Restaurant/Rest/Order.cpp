@@ -76,6 +76,11 @@ void Order::setArrTime(int t)
 	ArrTime = t;
 }
 
+int Order::GetSize() const
+{
+	return size;
+}
+
 
 
 int Order::GetArrTime() const {
