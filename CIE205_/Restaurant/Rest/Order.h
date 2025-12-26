@@ -18,7 +18,10 @@ protected:
 	double money;
 	double totalMoney;	//Total order money
 
-	int ArrTime, ServTime, FinishTime;	//arrival, service start, and finish times
+	int ArrTime;        
+	int WaitingTime;    
+	int ServTime;    
+	int FinishTime;	
 	   
 	
 	
@@ -48,13 +51,16 @@ public:
 	//
 	// TODO: Add More Member Functions As Needed
 	//
-	int GetArrTime() const;
+	int GetWaitingTime() const { return WaitingTime; }
 	int GetServTime() const { return ServTime; }
+
+	void SetWaitingTime(int wt) { WaitingTime = wt; }
+	void SetServTime(int st) { ServTime = st; }
+
+	int GetArrTime() const;
 	int GetFinishTime() const { return FinishTime; }
+
 	void setArrTime(int t);   
-	
-	
-	void SetServTime(int t) { ServTime = t; }
 	void SetFinishTime(int t) { FinishTime = t; }
 	
 

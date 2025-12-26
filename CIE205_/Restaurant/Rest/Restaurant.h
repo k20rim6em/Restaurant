@@ -56,6 +56,7 @@ public:
 	void ExecuteEvents(int TimeStep);	//executes all events at current timestep
 	void RunSimulation();
 	bool LoadData(string inputfilename);
+	void WriteOutputFile();
 	string AskForFileName();
 
 	

@@ -1,9 +1,5 @@
 ﻿#include <cstdlib>
 #include <time.h>
-#include <iostream>
-#include <fstream>
-#include <vector>
-using namespace std;
 #include "Restaurant.h"
 #include "Cook.h"
 #include "Order.h"
@@ -14,6 +10,10 @@ using namespace std;
 #include "../Generic_DS/Queue.h"
 #include "../GUI/GUI.h"
 #include "../Pri_Queue.h"
+#include <iostream>
+#include <fstream>
+#include <vector>
+using namespace std;
 
 Restaurant::Restaurant()
 {
@@ -35,7 +35,9 @@ void Restaurant::RunSimulation()
 
     int CurrentTimeStep = 1;
 
-    while (!EventsQueue.isEmpty())
+    while (!EventsQueue.isEmpty() || !InService.isEmpty()
+        || !VIP_Waiting.isEmpty() || !Normal_Waiting.isEmpty()
+        || !Vegan_Waiting.isEmpty())
     {
       
         pGUI->PrintMessage("TS = " + to_string(CurrentTimeStep));
@@ -105,6 +107,8 @@ void Restaurant::RunSimulation()
         }
         CurrentTimeStep++;
     }
+
+    WriteOutputFile();
 
     pGUI->PrintMessage("Simulation End | Cooks: N=" + to_string(N_Cooks)+ " G=" + to_string(G_Cooks)+ " V=" + to_string(V_Cooks));
     cout << "Processing TS = " << CurrentTimeStep << endl;
@@ -457,3 +461,142 @@ bool Restaurant::LoadData(string inputfilename)
     file.close();
     return true;
 }
+
+void InsertFinishedOrder(Order* o)
+{
+    int idx = 0;
+    Order* ptr = nullptr;
+    while (Finished.peekFront(ptr, idx))
+    {
+        if (o->GetFinishTime() < ptr->GetFinishTime() ||
+            (o->GetFinishTime() == ptr->GetFinishTime() && o->GetServTime() < ptr->GetServTime()))
+        {
+            Finished.insertAt(o, idx); // insert at position idx
+            return;
+        }
+        idx++;
+    }
+    Finished.enqueue(o); // if it goes at the end
+}
+
+
+void Restaurant::WriteOutputFile()
+{
+    ofstream outFile("Output.txt");
+    if (!outFile.is_open())
+        return;
+
+    // --- Finished Orders Table ---
+    outFile << "FT\tID\tAT\tWT\tST\n";
+
+    Queue<Order*> tempQueue;   // temporary queue to preserve Finished
+    Order* ordPtr;
+
+    while (Finished.peekFront(ordPtr))
+    {
+        // Write order details
+        outFile << ordPtr->GetFinishTime() << "\t"
+            << ordPtr->GetID() << "\t"
+            << ordPtr->GetArrTime() << "\t"
+            << ordPtr->GetWaitingTime() << "\t"
+            << ordPtr->GetServTime() << "\n";
+
+        // Move order to temp queue to preserve original Finished queue
+        Finished.dequeue(ordPtr);
+        tempQueue.enqueue(ordPtr);
+    }
+
+    // Copy back to Finished queue
+    while (tempQueue.peekFront(ordPtr))
+    {
+        tempQueue.dequeue(ordPtr);
+        Finished.enqueue(ordPtr);
+    }
+
+    outFile << "\n";
+
+    // --- Overall Statistics (already computed during simulation) ---
+    outFile << "Orders: " << totalOrders
+        << " [Norm:" << normalOrders
+        << ", Veg:" << veganOrders
+        << ", VIP:" << vipOrders << "]\n";
+
+    outFile << "Cooks: " << totalCooks
+        << " [Norm:" << normalCooks
+        << ", Veg:" << veganCooks
+        << ", VIP:" << vipCooks << "]\n";
+
+    outFile << "Avg Wait = " << avgWaitingTime
+        << ", Avg Serv = " << avgServiceTime << "\n";
+
+    outFile << "Auto-promoted: " << autoPromotedOrders << "\n";
+
+    // --- Per-Cook Statistics ---
+    auto printCookStats = [&](Queue<Cook*>& cooks) {
+        Cook* cPtr;
+        Queue<Cook*> tempCooks;
+        while (cooks.peekFront(cPtr))
+        {
+            outFile << "Cook " << cPtr->GetName() << ": Orders [Norm:" << cPtr->GetHandledNormal()
+                << ", Veg:" << cPtr->GetHandledVegan()
+                << ", VIP:" << cPtr->GetHandledVIP() << "], "
+                << "Busy: " << cPtr->GetBusyTime()
+                << ", Idle: " << cPtr->GetIdleTime()
+                << ", Break/Injury: " << cPtr->GetBreakTime()
+                << ", Utilization: " << cPtr->GetUtilization() << "%\n";
+
+            cooks.dequeue(cPtr);
+            tempCooks.enqueue(cPtr);
+        }
+
+        // Restore original cook queue
+        while (tempCooks.peekFront(cPtr))
+        {
+            tempCooks.dequeue(cPtr);
+            cooks.enqueue(cPtr);
+        }
+        };
+
+    printCookStats(Normal_Cooks);
+    printCookStats(Vegan_Cooks);
+    printCookStats(VIP_Cooks);
+
+    outFile.close();
+}
+
+
+
+/*void Restaurant::WriteOutputFile()
+{
+    ofstream outFile("Output.txt");
+    if (!outFile.is_open())
+        return;
+
+    outFile << "FT\tID\tAT\tWT\tST\n";
+
+    Node<Order*>* ptr = FinishedOrders.getFront();
+    while (ptr)
+    {
+        Order* ord = ptr->getItem();
+
+        outFile << ord->GetFinishTime() << "\t"
+            << ord->GetID() << "\t"
+            << ord->GetArrTime() << "\t"
+            << ord->GetWaitingTime() << "\t"
+            << ord->GetServTime() << "\n";
+
+        ptr = ptr->getNext();
+    }
+
+    outFile << "\n";
+
+    
+    outFile << "Orders: 0 [Norm:0, Veg:0, VIP:0]\n";
+    outFile << "Cooks: 0 [Norm:0, Veg:0, VIP:0]\n";
+    outFile << "Avg Wait = 0, Avg Serv = 0\n";
+    outFile << "Auto-promoted: 0\n";
+
+    outFile.close();
+}
+
+*/
