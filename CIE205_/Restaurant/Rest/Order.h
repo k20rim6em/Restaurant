@@ -57,10 +57,14 @@ public:
 	void SetWaitingTime(int wt) { WaitingTime = wt; }
 	void SetServTime(int st) { ServTime = st; }
 
+	int GetSize() const;
 	int GetArrTime() const;
 	int GetFinishTime() const { return FinishTime; }
 
 	void setArrTime(int t);   
+	
+	
+	void SetServTime(int t) { ServTime = t; }
 	void SetFinishTime(int t) { FinishTime = t; }
 	
 

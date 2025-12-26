@@ -74,6 +74,11 @@ public:
 	bool CancelNormalOrder(int id);
 	void PromoteOrder(int id, double extra);
 
+
+	void AssignCookToOrder(int CurrentTimeStep);
+	int CalculateST(Order* o, Cook* c);
+
+
 	/*string AskForFileName();*/
 
 	
