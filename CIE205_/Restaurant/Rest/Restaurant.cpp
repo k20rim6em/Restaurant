@@ -1,8 +1,9 @@
-﻿#include <cstdlib>
+#include <cstdlib>
 #include <time.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cmath> 
 using namespace std;
 #include "Restaurant.h"
 #include "Cook.h"
@@ -42,7 +43,7 @@ void Restaurant::RunSimulation()
 
       
         ExecuteEvents(CurrentTimeStep);
-
+        AssignCookToOrder(CurrentTimeStep);
         Order* o;
         int priority;
 
@@ -135,7 +136,71 @@ Restaurant::~Restaurant()
 {
     if (pGUI) delete pGUI;
 }
+int Restaurant::CalculateST(Order* o, Cook* c)
+{
+    return (int)ceil((double)o->GetSize() / c->GetSpeed());
+}
 
+void Restaurant::AssignCookToOrder(int CurrentTimeStep)
+{
+    Cook* c;
+    Order* o;
+    int priority;
+
+    // VIP Orders
+    if (!VIP_Waiting.isEmpty() && !VIP_Cooks.isEmpty())
+    {
+        VIP_Cooks.dequeue(c);
+        if (c->CanTakeOrder())
+        {
+            VIP_Waiting.dequeue(o, priority);
+            c->AssignOrder(o);
+
+            int ST = CalculateST(o, c);
+            o->SetServTime(CurrentTimeStep);
+            o->SetFinishTime(CurrentTimeStep + ST);
+
+            InService.enqueue(o);
+        }
+        VIP_Cooks.enqueue(c);
+    }
+
+    // Vegan Orders
+    if (!Vegan_Waiting.isEmpty() && !Vegan_Cooks.isEmpty())
+    {
+        Vegan_Cooks.dequeue(c);
+        if (c->CanTakeOrder())
+        {
+            Vegan_Waiting.dequeue(o);
+            c->AssignOrder(o);
+
+            int ST = CalculateST(o, c);
+            o->SetServTime(CurrentTimeStep);
+            o->SetFinishTime(CurrentTimeStep + ST);
+
+            InService.enqueue(o);
+        }
+        Vegan_Cooks.enqueue(c);
+    }
+
+    // Normal Orders
+    if (!Normal_Waiting.isEmpty() && !Normal_Cooks.isEmpty())
+    {
+        Normal_Cooks.dequeue(c);
+        if (c->CanTakeOrder())
+        {
+            Normal_Waiting.dequeue(o);
+            c->AssignOrder(o);
+
+            int ST = CalculateST(o, c);
+            o->SetServTime(CurrentTimeStep);
+            o->SetFinishTime(CurrentTimeStep + ST);
+
+            InService.enqueue(o);
+        }
+        Normal_Cooks.enqueue(c);
+    }
+}
 
 void Restaurant::FillDrawingList()
 {
