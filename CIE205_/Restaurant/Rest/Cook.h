@@ -1,23 +1,52 @@
-#pragma once
+#ifndef COOK_H
+#define COOK_H
 
-#include "..\Defs.h"
+#include "../Defs.h"  
 
-#pragma once
+class Order;        
+
 class Cook
 {
+private:
 	int ID;
-	ORD_TYPE type;	//for each order type there is a corresponding type (VIP, Normal, Vegan)
-	int speed;		//dishes it can prepare in one clock tick (in one timestep)
-	
+	ORD_TYPE type;
+	int speed;
+
+	bool isBusy;
+	bool inBreak;
+
+	Order* currentOrder;
+	int ordersDone;
+
+	int breakDuration;
+	int breakStartTime;
+
 public:
-	Cook(int id, ORD_TYPE type, int speed);
-	virtual ~Cook();
+	Cook(int id, ORD_TYPE ctype, int cspeed);
+	~Cook();
+
 	int GetID() const;
 	ORD_TYPE GetType() const;
-	void setID(int);
-	void setType(ORD_TYPE) ;
 	int GetSpeed() const;
-	void SetSpeed(int);
-	
 
+	void setID(int id);
+	void setType(ORD_TYPE t);
+	void SetSpeed(int s);
+
+	// States
+	bool IsBusy() const;
+	bool IsInBreak() const;
+	bool CanTakeOrder() const;
+
+	// Orders
+	void AssignOrder(Order* ord);
+	void FinishOrder();
+	int GetOrdersDone() const;
+
+	// Breaks
+	void SetBreakDuration(int duration);
+	void StartBreak(int timestep);
+	void EndBreak();
 };
+
+#endif
