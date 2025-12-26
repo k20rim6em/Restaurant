@@ -8,11 +8,14 @@ Cook::Cook(int id, ORD_TYPE ctype, int cspeed)
 
 	isBusy = false;
 	inBreak = false;
-	currentOrder = nullptr;
+	pCurrentOrder = nullptr;
 	ordersDone = 0;
-
+	finishTime = 0;
+	numOrdersServed = 0;
 	breakDuration = 0;
 	breakStartTime = -1;
+	breakEndStep = 0;
+	nOrdersServed = 0;
 }
 
 Cook::~Cook()
@@ -70,13 +73,13 @@ bool Cook::CanTakeOrder() const
 
 void Cook::AssignOrder(Order* ord)
 {
-	currentOrder = ord;
+	pCurrentOrder = ord;
 	isBusy = true;
 }
 
 void Cook::FinishOrder()
 {
-	currentOrder = nullptr;
+	pCurrentOrder = nullptr;
 	isBusy = false;
 	ordersDone++;
 }
@@ -106,4 +109,6 @@ void Cook::EndBreak()
 	isBusy = false;
 	breakStartTime = -1;
 }
+
+
 
